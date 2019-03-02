@@ -1,0 +1,443 @@
+
+PARSER_BEGIN(Odev)
+import java.util.*;
+import java.io.*;
+public class Odev
+{
+    public static ArrayList<Node> places = new ArrayList<Node>();
+    public static void main(String args[]) throws ParseException
+    {
+
+        try {
+        Odev parser = new Odev(System.in);
+        parser.ETU_TVL_Language();
+
+       }
+               catch(ParseException e) {
+                   System.err.println("[PARSING EXCEPTION] Invalid Input");
+                   System.exit(0);
+               }
+    }
+
+}
+class Node {
+     String isim;
+     String value;
+     }
+PARSER_END(Odev)
+SKIP :
+{
+    " "
+|   "\r"
+|   "\t"
+|   "\n"
+|  < "--" (~["\n","\r"])* ("\n" | "\r" | "\r\n") >
+}
+
+TOKEN : /* Keywords and punctuation */
+{
+  < SEMIC : ";" >
+| < ASSIGN : "=" >
+| < LBR : "(" >
+| < RBR : ")" >
+| < COMMA : "," >
+| < TRUE : "TRUE" >
+| < FALSE : "FALSE" >
+| < UNKNOWN : "UNKNOWN" >
+| < INPUT : "INPUT" >
+| < OUTPUT : "OUTPUT" >
+| < AND : "AND" >
+| < OR : "OR" >
+| < NOT : "NOT" >
+| < PROGRAM : "PROGRAM" >
+| < MAINSECTION : "MAIN SECTION" >
+}
+TOKEN : /* Numbers and identifiers */
+{
+ < ID : (["a"-"z","A"-"Z"](["a"-"z","A"-"Z", "0"-"9"])*)>
+ |<message :
+                  "\'"
+                  (   (~["\"","\\","\n","\r"])
+                    | ("\\"
+                        ( ["n","t","b","r","f","\\","'","\""]
+                        | ["0"-"7"] ( ["0"-"7"] )?
+                        | ["0"-"3"] ["0"-"7"] ["0"-"7"]
+                        )
+                      )
+                  )*
+                  "\'"
+              >
+}
+
+void ETU_TVL_Language() throws ParseException: {}
+{
+  <PROGRAM>  ID() <SEMIC>
+  DeclarationSection() InitializationSection() MainSection()
+}
+void ID() : {}
+{
+  <ID>
+}
+void DeclarationSection() throws ParseException : {}
+{
+  "DECLARATION SECTION" [VariableNameList()] <SEMIC>
+}
+void InitializationSection() : {}
+{
+  "INITIALIZATION SECTION" (InitList() <SEMIC>)*
+}
+void MainSection() : {}
+{
+  <MAINSECTION> (Statement()<SEMIC>)*
+}
+void VariableNameList() throws ParseException: {
+String x ="";
+Token y =null;
+ Node temp;
+}
+{
+    (
+         y=<ID>
+         {  x=y.image;
+            temp = new Node();
+            temp.isim=x;
+            temp.value="UNKNOWN";
+            places.add(temp);
+
+         }
+    )
+   (<COMMA>
+         y=<ID>
+            {  x=y.image;
+
+               temp = new Node();
+               temp.isim=x;
+               temp.value="UNKNOWN";
+               for(int i=0 ; i<places.size();i++){
+                   if(places.get(i).isim.equals(x)){
+                       throw new ParseException();
+                   }
+               }
+               places.add(temp);
+
+            }
+
+            )*
+
+}
+String VariableName() : {
+Token y;
+String x;
+}
+{
+  y=<ID>
+  {x=y.image;
+    return x;
+  }
+}
+void InitList() : {
+String x ="";
+Token y =null;
+ Node temp;
+}
+{
+        (
+             y=<ID>
+             {  x=y.image;
+                temp = new Node();
+                for(int i=0 ; i<places.size();i++){
+                   if(places.get(i).isim.equals(x)){
+                      temp=places.get(i);
+                  }
+                }
+             }
+             <ASSIGN>
+             x= LogicalValue()
+             {
+                temp.value=x;
+             }
+        )
+}
+String LogicalValue() : {
+    Token x;
+    String y = "";
+}
+{
+
+try {
+
+        (
+            x = <TRUE>
+            { y = x.image; }
+        )
+
+        |
+
+        (
+            x = <FALSE>
+            { y = x.image; }
+        )
+
+        |
+
+        (
+            x = <UNKNOWN>
+            { y = x.image; }
+        )
+
+    }
+
+    // If there were none throw an error and quit
+    catch (ParseException e) {
+        System.err.println("[PARSING ERROR] Invalid input");
+        System.exit(0);
+    }
+
+    {return y ;}
+
+
+
+}
+
+
+void Statement() : {}
+{
+  InputStmt()
+  | OutputStmt()
+  |BoolAssignmentStmt()
+}
+void InputStmt() : {}
+{
+  <INPUT> <message> VariableName()
+}
+
+void OutputStmt() : {
+String x="";
+String y="";
+Token z=null;
+}
+{
+  <OUTPUT>
+  z=<message>
+  x=BoolExpression()
+   {
+    y=z.image;
+    System.out.println(z+" "+x);
+   }
+}
+
+void BoolAssignmentStmt() : {
+String x ="";
+String y ="yunus";
+ Node temp=null;
+}
+{
+   x= VariableName()
+   {
+        for(int i=0 ; i<places.size();i++){
+            if(places.get(i).isim.equals(x)){
+                temp=places.get(i);
+            }
+        }
+   }
+
+   <ASSIGN>
+   y=BoolExpression()
+   {
+        temp.value=y;
+   }
+
+}
+
+String BoolExpression() : {
+String x ="";
+String y ="";
+String sonuc="";
+}
+{
+    try{
+
+        (
+            x=BoolExpressionAlpha()
+            {sonuc=x;}
+        )
+
+        (<OR> y=BoolExpressionAlpha())*
+
+        {
+            if(x.equals("TRUE")&&y.equals("TRUE")){
+                sonuc="TRUE";
+            }
+           else if(x.equals("TRUE")&&y.equals("FALSE")){
+                sonuc="TRUE";
+             }
+           else if(x.equals("FALSE")&&y.equals("TRUE")){
+                sonuc="TRUE";
+             }
+           else if(x.equals("FALSE")&&y.equals("FALSE")){
+                sonuc="FALSE";
+             }
+             else if(x.equals("TRUE")&&y.equals("UNKNOWN")){
+
+                 sonuc="TRUE";
+             }
+              else if(x.equals("UNKNOWN")&&y.equals("TRUE")){
+
+                 sonuc="TRUE";
+              }
+            else {
+
+                sonuc="UNKNOWN";
+             }
+
+        }
+
+      }catch (ParseException e) {
+        System.err.println("[PARSING ERROR] Invalid input");
+        System.exit(0);
+      }
+      {return sonuc;}
+
+
+}
+
+String BoolExpressionAlpha() : {
+String x ="";
+}
+{
+  x=BoolTerm()
+  {return x;}
+}
+
+String BoolTerm () : {
+String x ="";
+String y ="";
+String sonuc="";
+}
+{
+  try{
+
+    (
+        x=BoolTermAlpha()
+        {sonuc=x;}
+
+    )
+
+    (   <AND>
+
+        y=BoolTermAlpha()
+
+     )*
+    {
+        if(x.equals("TRUE")&&y.equals("TRUE")){
+            sonuc="TRUE";
+        }
+        else if(x.equals("TRUE")&&y.equals("FALSE")){
+            sonuc="FALSE";
+         }
+        else if(x.equals("FALSE")&&y.equals("TRUE")){
+            sonuc="FALSE";
+         }
+        else if(x.equals("FALSE")&&y.equals("FALSE")){
+            sonuc="FALSE";
+         }
+         else if(x.equals("FALSE")&&y.equals("UNKNOWN")){
+            sonuc="FALSE";
+         }
+         else if(x.equals("UNKNOWN")&&y.equals("FALSE")){
+            sonuc="FALSE";
+         }
+        else {
+            sonuc="UNKNOWN";
+         }
+
+    }
+
+  }catch (ParseException e) {
+    System.err.println("[PARSING ERROR] Invalid input");
+    System.exit(0);
+  }
+  {return sonuc;}
+}
+
+String BoolTermAlpha () : {
+String x ="";
+}
+{
+  x=BoolFactor()
+  {return x;}
+}
+
+
+// <Bool Factor> → <Bool Primary> | NOT <Bool Primary>
+
+String BoolFactor() : {
+String x ="";
+}
+{
+try{
+  (     x=BoolPrimary()
+
+  )
+
+  |
+
+  (    <NOT>
+        x=BoolPrimary()
+        {
+           if(x.equals("TRUE")){
+            x="FALSE";
+           }
+           else if(x.equals("FALSE")){
+            x="TRUE";
+           }
+        }
+
+  )
+   }catch (ParseException e) {
+         System.err.println("[PARSING ERROR] Invalid input");
+         System.exit(0);
+   }
+    {return x;}
+}
+
+
+//<Bool Primary> → <Logical Value> | <Variable Name> | (<Bool Expression>)
+
+String BoolPrimary() : {
+String x ="";
+Token y =null;
+ Node temp=null;
+}
+{
+try{
+  (     x=LogicalValue()
+
+  )
+
+  |
+
+  (     x=VariableName()
+        {
+            for(int i=0 ; i<places.size();i++){
+                if(places.get(i).isim.equals(x)){
+                     temp=places.get(i);
+                }
+            }
+            x=temp.value;
+        }
+  )
+
+  |
+
+  (    <LBR>
+       x=BoolExpression()
+       <RBR>
+
+  )
+ }catch (ParseException e) {
+       System.err.println("[PARSING ERROR] Invalid input");
+       System.exit(0);
+ }
+  {return x;}
+}
